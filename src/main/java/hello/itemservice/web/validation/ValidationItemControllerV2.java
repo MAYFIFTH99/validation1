@@ -43,7 +43,7 @@ public class ValidationItemControllerV2 {
         return "validation/v2/addForm";
     }
 
-    @PostMapping("/add")
+    //@PostMapping("/add")
     public String addItemV1(@ModelAttribute Item item, BindingResult bindingResult, RedirectAttributes redirectAttributes, Model model) {
         Map<String, String> errors = new HashMap<>();
         if (!StringUtils.hasText(item.getItemName())) {
@@ -76,6 +76,38 @@ public class ValidationItemControllerV2 {
         return "redirect:/validation/v2/items/{itemId}";
     }
 
+    @PostMapping("/add")
+    public String addItemV2(@ModelAttribute Item item, BindingResult bindingResult, RedirectAttributes redirectAttributes, Model model) {
+        Map<String, String> errors = new HashMap<>();
+        if (!StringUtils.hasText(item.getItemName())) {
+            bindingResult.addError(new FieldError("item", "itemName", item.getItemName(), false, null, null, "상품 이름은 필수입니다."));
+        }
+        if (item.getPrice() == null || item.getPrice() < 1000 || item.getPrice() > 1000000) {
+            bindingResult.addError(new FieldError("item", "itemName", item.getPrice(), false, null, null, "가격은 1000 ~ 1000000"));
+        }
+
+        if (item.getQuantity() == null || item.getQuantity() < 1 || item.getQuantity() > 9999) {
+            bindingResult.addError(new FieldError("item", "itemName", item.getQuantity(), false, null, null, "수량은 9999 미만"));
+        }
+
+        //특정 필드가 아닌, 복합 룰 검증
+        if (item.getPrice() != null && item.getQuantity() != null) {
+            int resultPrice = item.getPrice() * item.getQuantity();
+            if (resultPrice < 10000) {
+                bindingResult.addError(new ObjectError("item", null, null, "가격 * 수량의 합은 1만원 이상이어야 합니다."));
+            }
+        }
+
+        //검증 실패 시, 입력 폼으로 다시 이동
+        if(bindingResult.hasErrors()) {
+            return "validation/v2/addForm";
+        }
+
+        Item savedItem = itemRepository.save(item);
+        redirectAttributes.addAttribute("itemId", savedItem.getId());
+        redirectAttributes.addAttribute("status", true);
+        return "redirect:/validation/v2/items/{itemId}";
+    }
 
     @GetMapping("/{itemId}/edit")
     public String editForm(@PathVariable Long itemId, Model model) {
